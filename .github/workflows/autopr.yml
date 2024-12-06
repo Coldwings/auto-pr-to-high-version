@@ -55,11 +55,25 @@ jobs:
         set -x
         echo "PICKRESULT<<EOF" >> $GITHUB_OUTPUT
         echo "Pick up commits:" >> $GITHUB_OUTPUT
-        for commit in $(git rev-list ${{github.event.before}}..${{github.event.after}}); do
+        RANGE=$(git rev-list ${{github.event.before}}..${{github.event.after}} --reverse)
+        if [ $? -eq 0 ]; then # multiple commits
+          for commit in $RANGE; do
+            echo "" >> $GITHUB_OUTPUT
+            MSG=$(git cherry-pick -X theirs $commit)
+            if [ $? -ne 0 ]; then
+              echo "Failed to cherry-pick $commit" >> pick_up_failure.log
+            fi
+            echo "$MSG" >> $GITHUB_OUTPUT
+          done
+        else
           echo "" >> $GITHUB_OUTPUT
-          git cherry-pick -X theirs $commit >> $GITHUB_OUTPUT
-        done
+          git cherry-pick -X theirs ${{github.event.after}} >> $GITHUB_OUTPUT
+        fi
         echo "EOF" >> $GITHUB_OUTPUT
+        if [ -s pick_up_failure.log ]; then
+          git add pick_up_failure.log
+          git commit -m "Cherry-pick failed"
+        fi
         git push --set-upstream origin ${{steps.create_branch.outputs.PRBRANCH}}
         cat ${GITHUB_OUTPUT}
 
