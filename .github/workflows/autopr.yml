@@ -67,7 +67,7 @@ jobs:
           echo "$MSG" >> $GITHUB_OUTPUT
         done
         echo "EOF" >> $GITHUB_OUTPUT
-        if [ -s pick_up_failure.log ]; then
+        if [ -f pick_up_failure.log ]; then
           git add pick_up_failure.log
           git commit -m "Cherry-pick failed"
         fi
