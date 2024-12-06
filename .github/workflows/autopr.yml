@@ -8,6 +8,8 @@ on:
 jobs:
   auto-pr:
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/alibaba/photon-ut-base:latest
     steps:
     - uses: actions/checkout@v4
 
