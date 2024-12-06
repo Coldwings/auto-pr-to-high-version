@@ -56,7 +56,7 @@ jobs:
         set -x
         echo "PICKRESULT<<EOF" >> $GITHUB_OUTPUT
         echo "Pick up commits: ${{github.event.before}}..${{github.event.after}}" >> $GITHUB_OUTPUT
-        git diff ${{github.event.before}}..${{github.event.after}} > patchfile
+        git diff ${{github.event.before}} ${{github.event.after}} > patchfile
         MSG=$(git apply -v patchfile)
         if [ $? -ne 0 ]; then
           echo "$MSG" > patch_failure.log
