@@ -61,7 +61,7 @@ jobs:
         RANGE=$(git rev-list ${{github.event.before}}..${{github.event.after}} --reverse || echo ${{github.event.after}})
         for commit in $RANGE; do
           echo "" >> $GITHUB_OUTPUT
-          MSG=$(git cherry-pick -X theirs $commit)
+          MSG=$(git cherry-pick --strategy=recursive --strategy-option=theirs $commit)
           if [ $? -ne 0 ]; then
             echo "Failed to cherry-pick $commit" >> pick_up_failure.log
             echo "$MSG" >> pick_up_failure.log
