@@ -61,6 +61,7 @@ jobs:
           MSG=$(git cherry-pick -X theirs $commit)
           if [ $? -ne 0 ]; then
             echo "Failed to cherry-pick $commit" >> pick_up_failure.log
+            echo "$MSG" >> pick_up_failure.log
           fi
           echo "$MSG" >> $GITHUB_OUTPUT
         done
