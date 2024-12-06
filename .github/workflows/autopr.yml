@@ -54,7 +54,9 @@ jobs:
       run: |
         set -x
         echo "PICKRESULT<<EOF" >> $GITHUB_OUTPUT
+        echo "Pick up commits:" >> $GITHUB_OUTPUT
         for commit in $(git rev-list ${{github.event.before}}..${{github.event.after}}); do
+          echo "" >> $GITHUB_OUTPUT
           git cherry-pick -X theirs $commit >> $GITHUB_OUTPUT
         done
         echo "EOF" >> $GITHUB_OUTPUT
