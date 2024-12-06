@@ -7,7 +7,7 @@ on:
 
 jobs:
   auto-pr:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
 
@@ -59,7 +59,7 @@ jobs:
         RANGE=$(git rev-list ${{github.event.before}}..${{github.event.after}} --reverse || echo ${{github.event.after}})
         for commit in $RANGE; do
           echo "" >> $GITHUB_OUTPUT
-          MSG=$(git cherry-pick --strategy=recursive --strategy-option=theirs $commit)
+          MSG=$(git cherry-pick --strategy-option=theirs --allow-empty $commit)
           if [ $? -ne 0 ]; then
             echo "Failed to cherry-pick $commit" >> pick_up_failure.log
             echo "$MSG" >> pick_up_failure.log
@@ -82,5 +82,5 @@ jobs:
         gh pr create \
               --base ${{steps.branch_info.outputs.NEXT_BRANCH}} \
               --head ${{steps.create_branch.outputs.PRBRANCH}} \
-              --title "Auto PR from ${{steps.branch_info.outputs.CURRENT_BRANCH}}" \
+              --title "Auto PR from ${{steps.branch_info.outputs.CURRENT_BRANCH}} to ${{steps.branch_info.outputs.NEXT_BRANCH}}" \
               --body "${{steps.pick_up_commits.outputs.PICKRESULT}}"
