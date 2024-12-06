@@ -50,26 +50,22 @@ jobs:
         git switch -C ${PRBRANCH} origin/${{steps.branch_info.outputs.NEXT_BRANCH}}
         echo "PRBRANCH=$PRBRANCH" >> $GITHUB_OUTPUT
 
-    - name: Pick up commits
-      id: pick_up_commits
+    - name: Apply patch
+      id: apply_patch
       run: |
         set -x
         echo "PICKRESULT<<EOF" >> $GITHUB_OUTPUT
-        echo "Pick up commits:" >> $GITHUB_OUTPUT
-        RANGE=$(git rev-list ${{github.event.before}}..${{github.event.after}} --no-walk --reverse || echo ${{github.event.after}})
-        for commit in $RANGE; do
-          echo "" >> $GITHUB_OUTPUT
-          MSG=$(git cherry-pick --strategy-option=theirs --allow-empty --no-walk $commit)
-          if [ $? -ne 0 ]; then
-            echo "Failed to cherry-pick $commit" >> pick_up_failure.log
-            echo "$MSG" >> pick_up_failure.log
-          fi
-          echo "$MSG" >> $GITHUB_OUTPUT
-        done
+        echo "Pick up commits: ${{github.event.before}}..${{github.event.after}}" >> $GITHUB_OUTPUT
+        git diff ${{github.event.before}}..${{github.event.after}} > patchfile
+        MSG=$(git apply -v patchfile)
+        if [ $? -ne 0 ]; then
+          echo "$MSG" > patch_failure.log
+        fi
+        echo "$MSG" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-        if [ -f pick_up_failure.log ]; then
-          git add pick_up_failure.log
-          git commit -m "Cherry-pick failed"
+        if [ -f patch_failure.log ]; then
+          git add patch_failure.log
+          git commit -m "Patch failed"
         fi
         git push --set-upstream origin ${{steps.create_branch.outputs.PRBRANCH}}
         cat ${GITHUB_OUTPUT}
@@ -78,9 +74,9 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        echo "${{steps.pick_up_commits.outputs.PRBRANCH}}"
+        echo "${{steps.apply_patch.outputs.PRBRANCH}}"
         gh pr create \
               --base ${{steps.branch_info.outputs.NEXT_BRANCH}} \
               --head ${{steps.create_branch.outputs.PRBRANCH}} \
               --title "Auto PR from ${{steps.branch_info.outputs.CURRENT_BRANCH}} to ${{steps.branch_info.outputs.NEXT_BRANCH}}" \
-              --body "${{steps.pick_up_commits.outputs.PICKRESULT}}"
+              --body "${{steps.apply_patch.outputs.PICKRESULT}}"
