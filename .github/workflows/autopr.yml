@@ -1,0 +1,53 @@
+name: Precise Auto PR
+
+on:
+  push:
+    branches:
+      - 'release/*'
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: set git config
+      run: |
+        git config --global user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+        git config --global user.name "${GITHUB_ACTOR}"
+        git config -l
+
+    - name: Create Pull Request to the next higher release version
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        git fetch
+        RELEASE_VERSIONS=$(git branch -r | grep 'release/' | cut -d '/' -f 3 | sort -V)
+        CURRENT_VERSION=$(echo $GITHUB_REF | rev | cut -d '/' -f 1 | rev)
+        ME_AND_MY_NEXT=$(echo "$RELEASE_VERSIONS" | grep -w $CURRENT_VERSION -A 1)
+        NUM=$(echo "$ME_AND_MY_NEXT" | wc -l)
+        if (( NUM > 1 )); then
+          NEXT_VERSION=$(echo "$ME_AND_MY_NEXT" | tail -n 1)
+          NEXT_BRANCH="release/$NEXT_VERSION"
+          set -x
+        else
+          echo "No more higher release versions, will merge to main"
+          NEXT_VERSION="main"
+          NEXT_BRANCH="main"
+          set -x
+        fi
+        git switch $NEXT_BRANCH
+        LAST_COMMIT=${{github.event.after}}
+        FIRST_COMMIT=${{github.event.commits[0].id}}
+        git switch -C auto-pr-${LAST_COMMIT}-${NEXT_VERSION}
+        if [ "$FIRST_COMMIT" = "$LAST_COMMIT" ]; then
+          git cherry-pick -X theirs $LAST_COMMIT
+        else
+          git cherry-pick -X theirs $FIRST_COMMIT^..$LAST_COMMIT
+        fi
+        git push --set-upstream origin auto-pr-${LAST_COMMIT}-${NEXT_VERSION}
+        gh pr create \
+              --base $NEXT_BRANCH \
+              --head auto-pr-${LAST_COMMIT}-${NEXT_VERSION} \
+              --title "Auto PR from release/$CURRENT_VERSION" \
+              --body 'Created by Github action'
