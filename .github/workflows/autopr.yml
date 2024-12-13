@@ -56,14 +56,13 @@ jobs:
         set -x
         git checkout ${{steps.branch_info.outputs.NEXT_BRANCH}}
         git checkout -b ${{steps.create_branch.outputs.PRBRANCH}}
-        if ! git cherry-pick -X theirs ${{ github.event.after }} ; then
-          echo "merge=false" >> $GITHUB_OUTPUT
-          exit 0;
-        fi
-        if ! git diff --exit-code $DEFAULT_BRANCH...HEAD ; then
-          echo "merge=false" >> $GITHUB_OUTPUT
-          exit 0;
-        fi
+        REVS=$(git rev-list --reverse ${{ github.event.commits[0].id }}^..${{ github.event.after }} )
+        for rev in "$REVS"; do
+          if ! git cherry-pick -X theirs ${rev} ; then
+            echo "merge=false" >> $GITHUB_OUTPUT
+            exit 0;
+          fi
+        done
         git push -u origin ${{steps.create_branch.outputs.PRBRANCH}}
         echo "merge=true" >> $GITHUB_OUTPUT
 
